@@ -11,19 +11,13 @@
   var scene, stage, hero, finish, railFill, driveSection;
   var stageW = 0, stageH = 0, k = 1, vbH = 1000;
   var targetP = 0, currentP = 0;
-  var S = 0.6;           // share of scroll spent driving (Zone A)
   var dock = false;      // narrow-screen: dock cards to the bottom
   var running = false;
   var hoveredIndex = -1; // sign currently hovered by the mouse (brightens)
-  var snapPoints = [];   // progress values the scroll "sticks" to (each sign)
   var REACH_BAND = 130;  // world-units over which a sign changes colour as the car arrives
-  var stRef = null;      // the ScrollTrigger instance (scroll <-> progress math)
-  var lastInput = -1e9;  // ms of the last user scroll input (wheel/touch/key)
-  var lastMove = -1e9;   // ms the scroll position last changed (covers momentum)
-  var prevScroll = 0;    // last observed scroll position
-  var snapping = false;  // currently easing the scroll onto a sign
-  var snapTargetP = 0;   // progress we're sticking to
-  var SNAP_IDLE_MS = 130;// pause after scrolling stops before it sticks
+  var phases = [];       // pacing timeline: eased "travel" legs + flat "dwell" (STOP) at each light
+  var TRAVEL_W = 1.2;    // relative scroll spent driving between lights
+  var DWELL_W = 0.8;     // relative scroll the car is STOPPED at each light
 
   /* --- easing --- */
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
@@ -36,18 +30,24 @@
   }
 
   /* --- camera model ------------------------------------------------------- */
-  // path fraction the CAMERA centres on. Linear within each zone so signs are
-  // evenly spaced in scroll — every sticky point gets equal room. (The rAF
-  // ticker still smooths currentP → targetP, so motion stays fluid.)
+  // The camera centres on a staircase of stops (start → every light → finish):
+  // it EASES along each "travel" leg, then HOLDS on a flat "dwell" so the car
+  // visibly STOPS at every light — the same hold the "you are here" frontier
+  // uses. Pure function of p, so it stops on the first pass and is testable.
   function lookAtY(p) {
-    if (p <= S) return lerp(M.carStartY, M.frontierY, p / S);
-    return lerp(M.frontierY, M.destinationY, (p - S) / (1 - S));
+    if (!phases.length) return M.carStartY;
+    if (p <= 0) return phases[0].from;
+    for (var i = 0; i < phases.length; i++) {
+      var ph = phases[i];
+      if (p <= ph.p1 || i === phases.length - 1) {
+        if (ph.type === "dwell") return ph.at;
+        return lerp(ph.from, ph.to, smooth01((p - ph.p0) / (ph.p1 - ph.p0)));
+      }
+    }
+    return M.destinationY;
   }
-  // where the CAR sits (parks at the frontier once reached)
-  function carY(p) {
-    if (p <= S) return lerp(M.carStartY, M.frontierY, p / S);
-    return M.frontierY;
-  }
+  // the car follows the camera up to the frontier, then parks there
+  function carY(p) { return Math.min(lookAtY(p), M.frontierY); }
 
   function worldToScreenY(worldY, camTy) { return (worldY + camTy) * k; }
 
@@ -150,70 +150,37 @@
     if (fi) fi.style.transform = "translateY(" + ((1 - finOp) * 22).toFixed(1) + "px)";
   }
 
-  /* --- ticker loop (own smoothing → smooth without touching scroll speed) - */
+  /* --- ticker loop: smooth currentP → targetP (ms clock — gsap.ticker's is
+     seconds, which would leave the sign "breathing" effectively frozen) ------ */
   function nowMs() { return (window.performance && performance.now) ? performance.now() : 0; }
-  function scrollY() { return window.pageYOffset || document.documentElement.scrollTop || 0; }
 
   function tick() {
-    var tms = nowMs();                                   // ms clock (gsap.ticker's is seconds)
-    var cur = scrollY();
-    if (!snapping && Math.abs(cur - prevScroll) > 1) lastMove = tms; // user/momentum moving
-    maybeSnap(tms);
-    prevScroll = scrollY();
     currentP += (targetP - currentP) * 0.14;
     if (Math.abs(targetP - currentP) < 0.00015) currentP = targetP;
-    render(currentP, tms);
+    render(currentP, nowMs());
   }
-
-  /* --- sticky signs: once the user pauses, ease the scroll onto the nearest
-     sign so it settles ("sticks") there. Any fresh input cancels it instantly,
-     so the scroll is never hard-locked. --------------------------------------- */
-  function nearestSnap(p) {
-    var best = snapPoints[0] || 0, bd = Math.abs(p - best);
-    for (var i = 1; i < snapPoints.length; i++) {
-      var d = Math.abs(p - snapPoints[i]);
-      if (d < bd) { bd = d; best = snapPoints[i]; }
-    }
-    return best;
-  }
-  function maybeSnap(tms) {
-    if (!stRef || snapPoints.length < 2) return;
-    if (document.documentElement.classList.contains("modal-open")) return; // pop-up open
-    if (!snapping) {
-      if (tms - lastInput < SNAP_IDLE_MS || tms - lastMove < SNAP_IDLE_MS) return; // still moving
-      var near = nearestSnap(targetP);
-      if (Math.abs(near - targetP) < 0.0015) return;   // already parked on a sign
-      snapping = true; snapTargetP = near;
-    }
-    var range = stRef.end - stRef.start;
-    if (range <= 0) { snapping = false; return; }
-    var goal = stRef.start + snapTargetP * range;
-    var cur = scrollY();
-    var next = cur + (goal - cur) * 0.2;
-    if (Math.abs(goal - cur) < 0.6) { next = goal; snapping = false; }
-    window.scrollTo(0, next);
-  }
-  function onUserInput() { lastInput = nowMs(); snapping = false; }
 
   /* --- setup -------------------------------------------------------------- */
-  function computeSplit() {
-    if (M.allDone) { S = 1; return; }
-    var raw = (M.frontierY - M.carStartY) / (M.destinationY - M.carStartY);
-    S = Math.max(0.4, Math.min(0.85, raw));
-  }
-
-  // progress value at which the camera centres a given world-Y (lookAtY is monotonic)
-  function progressForY(targetY) {
-    var lo = 0, hi = 1, mid;
-    for (var i = 0; i < 40; i++) { mid = (lo + hi) / 2; if (lookAtY(mid) < targetY) lo = mid; else hi = mid; }
-    return clamp01((lo + hi) / 2);
-  }
-  // scroll "sticky" points: the hero (0), each sign centred, and the finish (1)
-  function computeSnaps() {
-    var pts = [0];
-    M.cps.forEach(function (cp) { pts.push(progressForY(cp.y)); });
-    pts.push(1);
-    snapPoints = pts.filter(function (v, idx, arr) { return arr.indexOf(v) === idx; }).sort(function (a, b) { return a - b; });
+  // Build the pacing timeline: travel to each stop, then a flat dwell (STOP)
+  // at it. stops = start → every light → finish. Longer dwell = longer hold.
+  function computePacing() {
+    var stops = [M.carStartY];
+    M.cps.forEach(function (cp) { stops.push(cp.y); });
+    stops.push(M.destinationY);
+    var raw = [];
+    for (var j = 1; j < stops.length; j++) {
+      raw.push({ type: "travel", from: stops[j - 1], to: stops[j] });
+      raw.push({ type: "dwell", at: stops[j] });
+    }
+    var total = 0;
+    raw.forEach(function (r) { total += (r.type === "travel" ? TRAVEL_W : DWELL_W); });
+    if (total === 0) total = 1;
+    var acc = 0;
+    phases = raw.map(function (r) {
+      var w = (r.type === "travel" ? TRAVEL_W : DWELL_W);
+      var p0 = acc / total; acc += w; var p1 = acc / total;
+      return { type: r.type, from: r.from, to: r.to, at: r.at, p0: p0, p1: p1 };
+    });
   }
 
   function init(model) {
@@ -225,14 +192,13 @@
     railFill = document.getElementById("rail-fill");
     driveSection = document.getElementById("drive");
 
-    computeSplit();
+    computePacing();
     computeDims();
-    computeSnaps();
 
     var gsap = window.gsap, ST = window.ScrollTrigger;
     gsap.registerPlugin(ST);
 
-    stRef = ST.create({
+    ST.create({
       trigger: driveSection,
       start: "top top",
       end: "bottom bottom",
@@ -244,11 +210,6 @@
     });
 
     ST.addEventListener("refreshInit", computeDims);
-
-    // sticky signs: a fresh scroll input cancels any in-progress snap immediately
-    ["wheel", "touchstart", "touchmove", "keydown", "pointerdown"].forEach(function (ev) {
-      window.addEventListener(ev, onUserInput, { passive: true });
-    });
 
     // interactions: hover brightens a sign; click opens its explainer pop-up
     M.lights.forEach(function (L) {

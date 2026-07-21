@@ -3,7 +3,7 @@
 A single, vertically-scrolling page shown from a **birdseye (top-down) view**. A
 car drives down a road through green hills, passing a sequence of **traffic
 lights** — each one a step on Starknet's quantum roadmap. Scrolling drives the
-car forward and **sticks on each sign** as you reach it. Signs the car hasn't
+car forward, coming to a **full stop at each light** as it reaches it. Signs the car hasn't
 reached yet glow **amber**; a completed sign flicks **green** as the car passes;
 the **current** frontier glows **red** and the car **parks** there ("You are
 here"). The road keeps going below to the destination — **Post-Quantum Secure**.
@@ -105,17 +105,19 @@ The engine re-spaces the road, lights and copy panels automatically.
 | `index.html` | Semantic baseline (an ordered list) + the enhanced scene containers. |
 | `css/styles.css` | Starknet brand system, the scene, and the static timeline. |
 | `js/scene.js` | Validates the config, builds the accessible list, and constructs the SVG world (road, hills, gantry lights, car, destination) + HTML copy panels. |
-| `js/drive.js` | The scroll engine + interactions: pins/snaps, drives sign colour & breathing from car position, handles hover. Everything is a pure function of one progress value `p ∈ [0,1]`. |
+| `js/drive.js` | The scroll engine + interactions: pins the stage, paces the drive (travel legs + a flat "dwell"/stop at each light), drives sign colour & breathing from car position, handles hover. Everything is a pure function of one progress value `p ∈ [0,1]`. |
 | `js/popup.js` | The explainer modal — open/close, content from the config, focus + Esc handling. |
 | `js/main.js` | Bootstrap: always renders the baseline; upgrades to the animated drive only when possible and welcome. |
 
 - **Motion:** GSAP + ScrollTrigger (loaded via CDN — free for commercial use
   since April 2025). ScrollTrigger pins the stage and supplies scroll progress;
   a small ticker smooths it for feel **without** hijacking scroll speed.
-- **Sticky signs:** a lightweight snap in the animation ticker eases the scroll
-  onto the nearest sign once you pause (evenly spaced — one per sign, plus the
-  hero and finish). Any fresh scroll input cancels it instantly, so the scroll
-  is never hard-locked; it only *settles* you on a sign when you stop.
+- **Stops at every light:** the scroll→motion mapping isn't linear — it eases
+  the car along each leg, then goes *flat* (a "dwell") at each light so the car
+  comes to a stop there on the first pass, the same hold the frontier uses. Tune
+  the feel with `TRAVEL_W` / `DWELL_W` in `js/drive.js` (higher `DWELL_W` = a
+  longer hold). The car never drives past the `current` frontier — it comes to a
+  full stop there and the camera pans on to the amber lights and finish.
 - **The car follows the road** because both are drawn from the same curve
   function — no MotionPath plugin needed, one fewer dependency to break.
 - **Two-zone camera:** up to the frontier the camera follows the car (it stays
@@ -145,9 +147,9 @@ moment or checking a content change without scrolling.
   in a JS file, the page needs JavaScript at all to show anything — an inherent
   trade-off of the "single editable config, no build" decision. A `<noscript>`
   message covers the scripts-off case.)*
-- **Sticky, not locked.** Scrolling settles onto the nearest sign when you
-  pause (snap), but is never hard-locked; keyboard, space-bar and page-down all
-  work normally.
+- **Stops, not locked.** The car halts at each light via the scroll→motion
+  mapping (a dwell), but scrolling itself is never hijacked or locked —
+  keyboard, space-bar and page-down all work normally.
 - **Mobile.** Vertical scroll is naturally mobile-friendly; on narrow screens the
   copy panels dock to the bottom of the viewport.
 - **Performance.** Animation touches transform/opacity only; the render is a
