@@ -65,8 +65,10 @@
   /* --- dimensions --------------------------------------------------------- */
   function computeDims() {
     var r = stage.getBoundingClientRect();
-    stageW = r.width || window.innerWidth;
-    stageH = r.height || window.innerHeight;
+    var w = r.width || window.innerWidth || 0;
+    var h = r.height || window.innerHeight || 0;
+    if (w <= 0 || h <= 0) return;           // not laid out yet — never write NaN; a later refresh catches it
+    stageW = w; stageH = h;
     k = stageW / M.W;
     vbH = M.W * stageH / stageW;            // keeps slice == exact fill (no crop)
     scene.setAttribute("viewBox", "0 0 " + M.W + " " + vbH.toFixed(1));
