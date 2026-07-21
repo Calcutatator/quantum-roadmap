@@ -38,8 +38,11 @@
       var root = document.documentElement;
       root.classList.add("is-enhanced");
 
-      // give the pin enough scroll room: one screenful per step, plus hero + finish
-      var scrollVh = Math.max(steps.length + 2.5, 5) * 100;
+      // Scroll length controls the SCROLL SPEED: taller = the same scrolling
+      // advances the journey less, i.e. slower. ~2 screens of scroll per stop
+      // (start + each light + finish). Raise SCREENS_PER_STOP to slow further.
+      var SCREENS_PER_STOP = 2.0;
+      var scrollVh = Math.max((steps.length + 2) * SCREENS_PER_STOP, 8) * 100;
       document.getElementById("drive").style.height = scrollVh + "vh";
 
       var model = SCENE.build(steps);
