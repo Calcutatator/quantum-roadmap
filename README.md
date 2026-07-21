@@ -3,11 +3,14 @@
 A single, vertically-scrolling page shown from a **birdseye (top-down) view**. A
 car drives down a road through green hills, passing a sequence of **traffic
 lights** — each one a step on Starknet's quantum roadmap. Scrolling drives the
-car forward: it passes every **green** (completed) light, then **parks at the
-current frontier** (the red "You are here" light). The road keeps going below,
-but the lights ahead are **unlit** ("not turned on yet"), so a reader can scroll
-on to see what's coming while the car stays honestly parked where reality is. At
-the very bottom sits the destination: **Post-Quantum Secure**.
+car forward and **sticks on each sign** as you reach it. Signs the car hasn't
+reached yet glow **amber**; a completed sign flicks **green** as the car passes;
+the **current** frontier glows **red** and the car **parks** there ("You are
+here"). The road keeps going below to the destination — **Post-Quantum Secure**.
+
+Every sign is interactive: **hover** to brighten it, and **click** it (or its
+"Details" button) to open a themed **pop-up explainer** with more detail and a
+link. The sign you're stopped at gently breathes.
 
 Built to the approved design & technical scope. Brand: **Starknet** (Infinite
 Blue ground, Nebula gradient, Inter).
@@ -47,28 +50,33 @@ Each step looks like this:
 ```js
 {
   id: "pq-accounts",
-  title: "Post-quantum accounts",                 // ← heading at the light
-  body:  "One to three sentences of context.",     // ← body at the light
-  status: "current",                               // done | current | upcoming
-  link:  { label: "Read more", url: "https://…" }  // optional; blank = hidden
+  title:  "Post-quantum accounts",                  // ← heading at the light AND pop-up
+  body:   "One line shown on the drive-by card.",    // ← short card text
+  status: "current",                                 // done | current | upcoming
+  detail: "What it is — 1–3 sentences (pop-up).",    // ← pop-up explainer
+  hurdle: "The challenge — 1–2 sentences (pop-up).", // ← optional; shown under "The hurdle"
+  link:   { label: "Read more", url: "https://…" }   // ← pop-up link; blank = hidden
 }
 ```
 
 ### The two things you'll want to do
 
-**1. Write / change the copy at a light** → edit that step's `title` and `body`.
+**1. Write / change the copy** → edit that step's `title`, `body`, and the pop-up
+`detail` / `hurdle` / `link`.
 
-**2. Flip a light and move the car** → change that step's `status`:
+**2. Flip a light and move the car** → change that step's `status`. The lamp
+colour is then driven by the car's position:
 
-| `status`    | Light          | Car does…                              |
-|-------------|----------------|----------------------------------------|
-| `"done"`    | **Green**      | drives through it                      |
-| `"current"` | **Red**        | **stops here** — the "You are here" frontier |
-| `"upcoming"`| **Unlit**      | road is visible but untravelled        |
-| `"progress"`| **Amber** *(optional)* | "started, not finished"        |
+| `status`    | Before the car reaches it | After | Car does…                          |
+|-------------|---------------------------|-------|------------------------------------|
+| `"done"`    | **Amber** (ahead)         | flicks **Green** as it passes | drives through it |
+| `"current"` | **Amber** (ahead)         | turns **Red** on arrival | **stops here** — "You are here" |
+| `"upcoming"`| **Amber** (ahead)         | stays **Amber** (never reached) | road visible, untravelled |
 
-The car's stopping point is **not hard-coded** — the engine parks it at whichever
-step is `"current"`. Moving the frontier is a one-word edit.
+So **every sign the car hasn't reached yet glows amber**; green means "passed",
+red means "you are here". The car's stopping point is **not hard-coded** — the
+engine parks it at whichever step is `"current"`. Moving the frontier is a
+one-word edit.
 
 - **Add a step:** copy one `{ … }` block and fill it in.
 - **Remove a step:** delete its block.
@@ -97,17 +105,24 @@ The engine re-spaces the road, lights and copy panels automatically.
 | `index.html` | Semantic baseline (an ordered list) + the enhanced scene containers. |
 | `css/styles.css` | Starknet brand system, the scene, and the static timeline. |
 | `js/scene.js` | Validates the config, builds the accessible list, and constructs the SVG world (road, hills, gantry lights, car, destination) + HTML copy panels. |
-| `js/drive.js` | The scroll engine. Everything is a pure function of one progress value `p ∈ [0,1]`, so the drive is perfectly scrubbable and reversible. |
+| `js/drive.js` | The scroll engine + interactions: pins/snaps, drives sign colour & breathing from car position, handles hover. Everything is a pure function of one progress value `p ∈ [0,1]`. |
+| `js/popup.js` | The explainer modal — open/close, content from the config, focus + Esc handling. |
 | `js/main.js` | Bootstrap: always renders the baseline; upgrades to the animated drive only when possible and welcome. |
 
 - **Motion:** GSAP + ScrollTrigger (loaded via CDN — free for commercial use
   since April 2025). ScrollTrigger pins the stage and supplies scroll progress;
   a small ticker smooths it for feel **without** hijacking scroll speed.
+- **Sticky signs:** ScrollTrigger `snap` settles the scroll onto the nearest
+  sign when you pause (evenly spaced, one per sign plus the hero and finish). It
+  eases you onto a sign — it never hard-locks the scroll.
 - **The car follows the road** because both are drawn from the same curve
   function — no MotionPath plugin needed, one fewer dependency to break.
 - **Two-zone camera:** up to the frontier the camera follows the car (it stays
   centred while the world scrolls past); past the frontier the camera unpins and
-  the parked car drifts up and out of the top while the unlit road scrolls in.
+  the parked car drifts up and out of the top while the amber road-ahead scrolls in.
+- **Sign state** is a pure function of the car's position: amber (ahead) →
+  green (passed) / red (frontier). Hover brightens a sign; the centred sign
+  breathes; clicking a sign opens its pop-up (`js/popup.js`).
 
 ### Debug / preview hook
 
@@ -121,15 +136,17 @@ moment or checking a content change without scrolling.
 
 - **Reduced motion is honoured (hard requirement).** With
   `prefers-reduced-motion: reduce`, the page does **not** animate — it shows the
-  same steps as a clean vertical timeline with green/red/unlit status. The same
-  view is the fallback if GSAP can't load (e.g. offline).
+  same steps as a clean vertical timeline with green / red / amber status, and
+  each item's "Details" button opens the same pop-up. The same view is the
+  fallback if GSAP can't load (e.g. offline).
 - **Progressive enhancement.** The steps render as a semantic ordered list
   first; JS enhances that into the animated scene. *(Note: because content lives
   in a JS file, the page needs JavaScript at all to show anything — an inherent
   trade-off of the "single editable config, no build" decision. A `<noscript>`
   message covers the scripts-off case.)*
-- **No scroll hijacking.** Scroll is never locked; keyboard, space-bar and
-  page-down all work normally.
+- **Sticky, not locked.** Scrolling settles onto the nearest sign when you
+  pause (snap), but is never hard-locked; keyboard, space-bar and page-down all
+  work normally.
 - **Mobile.** Vertical scroll is naturally mobile-friendly; on narrow screens the
   copy panels dock to the bottom of the viewport.
 - **Performance.** Animation touches transform/opacity only; the render is a
@@ -145,8 +162,8 @@ These followed the scope's own recommendations; all are easy to revisit.
    road scrolls in (most honest).
 2. **Road shape** — gentle S-curves; the car banks into the turns.
 3. **Progress meter** — included: a "distance to post-quantum secure" rail.
-4. **Fourth (amber) state** — the engine supports `"progress"` (amber); the
-   default config uses the three core states.
+4. **Amber state** — amber now means "the car hasn't reached this sign yet";
+   signs turn green (passed) or red (frontier) from the car's position.
 5. **Destination** — a payoff moment: a glowing Nebula "Post-Quantum Secure"
    badge over a radiating finish marker.
 6. **Art assets** — generated as inline SVG (no external image dependency).

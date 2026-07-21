@@ -14,23 +14,31 @@
   var S = 0.6;           // share of scroll spent driving (Zone A)
   var dock = false;      // narrow-screen: dock cards to the bottom
   var running = false;
+  var hoveredIndex = -1; // sign currently hovered by the mouse (brightens)
+  var snapPoints = [];   // progress values the scroll "sticks" to (each sign)
+  var REACH_BAND = 130;  // world-units over which a sign changes colour as the car arrives
 
   /* --- easing --- */
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
-  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
-  function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
   function smooth01(t) { t = clamp01(t); return t * t * (3 - 2 * t); }
+  function setLamp(lamp, haloOp, coreOp) {
+    if (!lamp) return;
+    lamp.halo.setAttribute("opacity", clamp01(haloOp).toFixed(3));
+    lamp.core.setAttribute("opacity", clamp01(coreOp).toFixed(3));
+  }
 
   /* --- camera model ------------------------------------------------------- */
-  // path fraction the CAMERA centres on
+  // path fraction the CAMERA centres on. Linear within each zone so signs are
+  // evenly spaced in scroll — every sticky point gets equal room. (The rAF
+  // ticker still smooths currentP → targetP, so motion stays fluid.)
   function lookAtY(p) {
-    if (p <= S) return lerp(M.carStartY, M.frontierY, easeOutCubic(p / S));
-    return lerp(M.frontierY, M.destinationY, easeInOut((p - S) / (1 - S)));
+    if (p <= S) return lerp(M.carStartY, M.frontierY, p / S);
+    return lerp(M.frontierY, M.destinationY, (p - S) / (1 - S));
   }
   // where the CAR sits (parks at the frontier once reached)
   function carY(p) {
-    if (p <= S) return lerp(M.carStartY, M.frontierY, easeOutCubic(p / S));
+    if (p <= S) return lerp(M.carStartY, M.frontierY, p / S);
     return M.frontierY;
   }
 
@@ -64,25 +72,31 @@
     M.carEl.setAttribute("transform", "translate(" + cx.toFixed(2) + "," + cy.toFixed(2) + ") rotate(" + ang.toFixed(2) + ")");
 
     var centre = stageH / 2;
-    var pulse = 0.72 + 0.28 * Math.sin((time || 0) * 0.004);
+    var t = time || 0;
 
-    // lights
+    // lights — colour is driven by the CAR's position relative to each sign:
+    //   amber while ahead (not reached) · green once a "done" sign is passed ·
+    //   red at the "current" frontier. The centred sign breathes; hover brightens.
     for (var i = 0; i < M.lights.length; i++) {
       var L = M.lights[i];
       var sy = worldToScreenY(L.y, camTy);
       var prox = clamp01(1 - Math.abs(sy - centre) / (stageH * 0.62));
-      if (L.status === "done") {
-        var lit = clamp01((stageH * 0.60 - sy) / (stageH * 0.30));  // flicks green as we reach it, then latches
-        if (L.halo) L.halo.setAttribute("opacity", (lit).toFixed(3));
-        if (L.core) L.core.setAttribute("opacity", (0.22 + lit * 0.78).toFixed(3));
-      } else if (L.status === "current") {
-        if (L.halo) L.halo.setAttribute("opacity", ((0.62 + 0.38 * prox) * pulse).toFixed(3));
-        if (L.core) L.core.setAttribute("opacity", (0.9 + 0.1 * prox).toFixed(3));
-      } else if (L.status === "progress") {
-        if (L.halo) L.halo.setAttribute("opacity", ((0.35 + 0.4 * prox) * pulse).toFixed(3));
-        if (L.core) L.core.setAttribute("opacity", (0.2 + 0.6 * prox).toFixed(3));
-      } else { // upcoming — stays unlit; a faint hint when centred
-        if (L.halo) L.halo.setAttribute("opacity", (prox * 0.22).toFixed(3));
+      var reach = clamp01((cy - (L.y - REACH_BAND)) / REACH_BAND); // 0 = not reached, 1 = arrived/passed
+
+      var hover = (i === hoveredIndex) ? 1 : 0;
+      var breathe = 1 + 0.16 * prox * prox * Math.sin(t * 0.005);  // the stopped-at sign gently pulses
+      var glow = (0.4 + 0.4 * prox) * breathe + hover * 0.45;      // visible off-centre, brighter centred/hovered
+      var core = 0.35 + 0.45 * prox + hover * 0.25;
+
+      if (L.lamps.green) {          // "done": amber → green as the car passes
+        setLamp(L.lamps.amber, (1 - reach) * glow, (1 - reach) * core);
+        setLamp(L.lamps.green, reach * glow, 0.25 + reach * core);
+      } else if (L.lamps.red) {     // "current": amber → red as the car arrives
+        setLamp(L.lamps.amber, (1 - reach) * glow, (1 - reach) * core);
+        setLamp(L.lamps.red, reach * glow, 0.3 + reach * core);
+        if (L.tag) L.tag.setAttribute("opacity", clamp01((reach - 0.25) / 0.5).toFixed(3));
+      } else {                      // "upcoming": stays amber (never reached)
+        setLamp(L.lamps.amber, glow, core);
       }
     }
 
@@ -143,6 +157,20 @@
     S = Math.max(0.4, Math.min(0.85, raw));
   }
 
+  // progress value at which the camera centres a given world-Y (lookAtY is monotonic)
+  function progressForY(targetY) {
+    var lo = 0, hi = 1, mid;
+    for (var i = 0; i < 40; i++) { mid = (lo + hi) / 2; if (lookAtY(mid) < targetY) lo = mid; else hi = mid; }
+    return clamp01((lo + hi) / 2);
+  }
+  // scroll "sticky" points: the hero (0), each sign centred, and the finish (1)
+  function computeSnaps() {
+    var pts = [0];
+    M.cps.forEach(function (cp) { pts.push(progressForY(cp.y)); });
+    pts.push(1);
+    snapPoints = pts.filter(function (v, idx, arr) { return arr.indexOf(v) === idx; }).sort(function (a, b) { return a - b; });
+  }
+
   function init(model) {
     M = model;
     scene = document.getElementById("scene");
@@ -154,6 +182,7 @@
 
     computeSplit();
     computeDims();
+    computeSnaps();
 
     var gsap = window.gsap, ST = window.ScrollTrigger;
     gsap.registerPlugin(ST);
@@ -165,11 +194,20 @@
       pin: stage,
       pinSpacing: true,
       invalidateOnRefresh: true,
+      // sticky: settle onto the nearest sign when scrolling stops (never hard-locks)
+      snap: { snapTo: snapPoints, duration: { min: 0.15, max: 0.5 }, delay: 0.06, ease: "power2.inOut", directional: false },
       onUpdate: function (self) { targetP = self.progress; },
       onRefresh: function (self) { targetP = self.progress; }
     });
 
     ST.addEventListener("refreshInit", computeDims);
+
+    // interactions: hover brightens a sign; click opens its explainer pop-up
+    M.lights.forEach(function (L) {
+      L.hit.addEventListener("mouseenter", function () { hoveredIndex = L.index; });
+      L.hit.addEventListener("mouseleave", function () { if (hoveredIndex === L.index) hoveredIndex = -1; });
+      L.hit.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); if (window.POPUP) POPUP.open(L.step); });
+    });
 
     gsap.ticker.add(tick);
     running = true;

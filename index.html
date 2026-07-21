@@ -83,6 +83,20 @@
     </section>
   </main>
 
+  <!-- Explainer pop-up (opened by clicking a roadsign or a "Details" button).
+       The catcher is transparent — the page behind is NOT dimmed; the card takes
+       up the majority of the screen. Closes on ✕, outside-click, or Esc. -->
+  <div id="explainer" class="explainer" hidden>
+    <div class="explainer-catcher" data-close></div>
+    <div class="explainer-card" role="dialog" aria-modal="true" aria-labelledby="explainer-title">
+      <button class="explainer-x" type="button" data-close aria-label="Close explainer">&times;</button>
+      <p class="explainer-eyebrow"></p>
+      <h2 id="explainer-title" class="explainer-title"></h2>
+      <div class="explainer-body"></div>
+      <a class="explainer-link" href="#" target="_blank" rel="noopener"></a>
+    </div>
+  </div>
+
   <noscript>
     <p style="max-width:40rem;margin:2rem auto;padding:0 1.25rem;font:400 1rem/1.6 system-ui,sans-serif;color:#FBFBFB">
       This page uses JavaScript to render the interactive roadmap. With scripts
@@ -100,6 +114,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
   <!-- App -->
+  <script src="js/popup.js"></script>
   <script src="js/scene.js"></script>
   <script src="js/drive.js"></script>
   <script src="js/main.js"></script>

@@ -301,3 +301,100 @@ html.is-enhanced.layout-dock .rail { height: min(44vh, 300px); right: .6rem; }
   .hero-arrow::before { animation: none; }
   * { scroll-behavior: auto !important; }
 }
+
+/* ============================================================================
+   SIGN INTERACTIONS — cursor, hover ring, and "Details" buttons
+   ========================================================================== */
+.light-hit { cursor: pointer; }
+.light-ring { transition: opacity .18s ease; pointer-events: none; }
+.light:hover .light-ring { opacity: .5; }
+
+.card-more, .rs-more {
+  margin-top: .75rem; padding: .42rem .85rem; border-radius: 9px;
+  font: 600 .82rem var(--font); cursor: pointer; color: var(--ink);
+  background: rgba(255,255,255,.06); border: 1px solid var(--card-border);
+  transition: background .15s, border-color .15s, transform .15s;
+}
+.card-more:hover, .rs-more:hover { background: rgba(255,255,255,.12); border-color: var(--sn-lavender-sky); transform: translateY(-1px); }
+.card-more { pointer-events: auto; }
+
+/* Unreached signs read amber ("ahead") in the static view too */
+.rs-item[data-status="upcoming"] .rs-dot {
+  background: var(--amber);
+  box-shadow: 0 0 0 2px var(--amber), 0 0 14px 1px color-mix(in srgb, var(--amber) 55%, transparent);
+}
+.rs-item[data-status="upcoming"] .rs-badge {
+  color: var(--amber); border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+}
+.rs-list::before {
+  background: linear-gradient(180deg, var(--go), var(--stop) 52%, var(--amber) 60%);
+}
+
+/* ============================================================================
+   EXPLAINER POP-UP — themed modal; the page behind is NOT dimmed
+   ========================================================================== */
+html.modal-open { overflow: hidden; }
+
+.explainer[hidden] { display: none; }
+.explainer {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(1rem, 4vw, 2.5rem);
+}
+/* transparent click-catcher — closes on outside-click without shading the page */
+.explainer-catcher { position: absolute; inset: 0; background: transparent; cursor: pointer; }
+
+.explainer-card {
+  position: relative;
+  width: min(680px, 94vw);
+  max-height: min(84vh, 760px);
+  overflow-y: auto;
+  padding: clamp(1.6rem, 4vw, 2.6rem);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(28,28,132,.97), rgba(12,12,79,.98));
+  border: 1px solid var(--card-border);
+  box-shadow:
+    0 30px 90px -20px rgba(0,0,0,.78),
+    0 0 60px -18px color-mix(in srgb, var(--sn-nebula-b) 50%, transparent);
+  color: var(--ink);
+  animation: explainer-in .28s var(--ease);
+}
+@keyframes explainer-in { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+
+.explainer-x {
+  position: absolute; top: 14px; right: 14px; width: 38px; height: 38px;
+  display: grid; place-items: center; font-size: 1.5rem; line-height: 1;
+  border-radius: 10px; border: 1px solid var(--hairline); cursor: pointer;
+  background: rgba(255,255,255,.05); color: var(--ink-soft);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.explainer-x:hover { background: rgba(255,255,255,.12); color: var(--ink); border-color: var(--card-border); }
+
+.explainer-eyebrow {
+  margin: 0 0 .55rem; font-size: .72rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--sn-lavender-sky);
+  display: inline-flex; align-items: center; gap: .45rem; padding-right: 2.5rem;
+}
+.explainer-eyebrow::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.explainer-eyebrow[data-status="done"]     { color: var(--go); }
+.explainer-eyebrow[data-status="current"]  { color: var(--stop); }
+.explainer-eyebrow[data-status="upcoming"] { color: var(--amber); }
+
+.explainer-title {
+  margin: 0 0 1.1rem; font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight: 800;
+  letter-spacing: -0.02em; line-height: 1.12; padding-right: 2rem;
+}
+.explainer-para { margin: 0 0 1rem; color: var(--ink-soft); font-size: 1.02rem; line-height: 1.62; }
+.explainer-para:last-child { margin-bottom: 0; }
+.explainer-label {
+  margin: 1.3rem 0 .4rem; font-size: .73rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--sn-nebula-a);
+}
+.explainer-link {
+  display: inline-block; margin-top: 1.7rem; padding: .72rem 1.25rem; border-radius: 12px;
+  font-weight: 700; text-decoration: none; color: #1a0f2e; background: var(--sn-nebula);
+  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--sn-nebula-b) 60%, transparent);
+  transition: transform .15s var(--ease), box-shadow .15s;
+}
+.explainer-link:hover { transform: translateY(-1px); box-shadow: 0 16px 38px -12px color-mix(in srgb, var(--sn-nebula-b) 72%, transparent); }
+.explainer-link[hidden] { display: none; }

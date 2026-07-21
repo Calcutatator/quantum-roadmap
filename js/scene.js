@@ -86,10 +86,11 @@
       li.appendChild(html("span", "rs-badge", STATUS_LABEL[s.status] || "Ahead"));
       li.appendChild(html("h3", "rs-item-title", s.title || ""));
       if (s.body) li.appendChild(html("p", "rs-item-body", s.body));
-      if (s.link && s.link.url && s.link.label) {
-        var a = html("a", "rs-item-link", s.link.label + " →");
-        a.href = s.link.url; a.rel = "noopener";
-        li.appendChild(a);
+      if (s.detail) {
+        var more = html("button", "rs-more", "Details →");
+        more.type = "button";
+        more.addEventListener("click", function () { if (window.POPUP) POPUP.open(s); });
+        li.appendChild(more);
       }
       list.appendChild(li);
     });
@@ -149,11 +150,10 @@
       card.appendChild(html("span", "card-badge", STATUS_LABEL[cp.status] || "Ahead"));
       card.appendChild(html("h3", "card-title", cp.step.title || ""));
       if (cp.step.body) card.appendChild(html("p", "card-body", cp.step.body));
-      if (cp.step.link && cp.step.link.url && cp.step.link.label) {
-        var a = html("a", "card-link", cp.step.link.label + " →");
-        a.href = cp.step.link.url; a.rel = "noopener";
-        card.appendChild(a);
-      }
+      var more = html("button", "card-more", "Details →");
+      more.type = "button";
+      more.addEventListener("click", function (e) { e.stopPropagation(); if (window.POPUP) POPUP.open(cp.step); });
+      card.appendChild(more);
       cardsWrap.appendChild(card);
       return card;
     });
@@ -264,47 +264,56 @@
     group.appendChild(svg("rect", { x: (x - barW / 2).toFixed(1), y: (y - 5).toFixed(1), width: barW, height: 9, rx: 4, fill: "#2b2b63", opacity: 0.9 }));
     group.appendChild(svg("rect", { x: (x - barW / 2).toFixed(1), y: (y - 5).toFixed(1), width: barW, height: 3, rx: 1.5, fill: "#4a4a9a", opacity: 0.6 }));
 
+    var hw = 62, hh = 26;
+
+    // hover ring (framing highlight; shown on :hover via CSS)
+    group.appendChild(svg("rect", { class: "light-ring", x: (x - hw / 2 - 7).toFixed(1), y: (y - hh / 2 - 7).toFixed(1), width: hw + 14, height: hh + 14, rx: 14, fill: "none", stroke: "#FBFBFB", "stroke-width": 2, opacity: 0 }));
+
     // signal housing (top-down): three lamps L=red M=amber R=green
-    var hw = 62, hh = 26, hx = x - hw / 2, hy = y - hh / 2;
+    var hx = x - hw / 2, hy = y - hh / 2;
     group.appendChild(svg("rect", { x: hx.toFixed(1), y: hy.toFixed(1), width: hw, height: hh, rx: 8, fill: "#141436", stroke: "#3a3a80", "stroke-width": 1.5 }));
 
     var lampR = 7.2;
     var positions = { red: x - 18, amber: x, green: x + 18 };
     var colors = { red: "#EC796B", amber: "#F4B15E", green: "#90EAC4" };
-    // dim base lamps
+    // dim base glass for all three positions
     ["red", "amber", "green"].forEach(function (key) {
       group.appendChild(svg("circle", { cx: positions[key], cy: y, r: lampR, fill: colors[key], opacity: 0.16 }));
     });
 
-    // which lamp is "active" for this status
-    var activeKey = cp.status === "done" ? "green" : cp.status === "current" ? "red" : cp.status === "progress" ? "amber" : null;
-
-    var halo = null, core = null;
-    if (activeKey) {
-      halo = svg("circle", { cx: positions[activeKey], cy: y, r: lampR * 3.1, fill: colors[activeKey], filter: "url(#lampGlow)", opacity: 0 });
-      core = svg("circle", { cx: positions[activeKey], cy: y, r: lampR, fill: colors[activeKey], opacity: 0.2 });
-      group.insertBefore(halo, group.firstChild.nextSibling); // behind housing-ish but ok as first glow layer
-      group.appendChild(core);
-    } else {
-      // upcoming: a faint outline that the reader can notice ("not turned on yet")
-      halo = svg("circle", { cx: positions.green, cy: y, r: lampR * 2.0, fill: "#A1A1D6", filter: "url(#lampGlow)", opacity: 0 });
-      group.appendChild(halo);
+    // controllable lamps (halo + core), driven each frame by drive.js:
+    //   amber = "ahead / not reached" (every sign has one)
+    //   green = a "done" sign the car has passed
+    //   red   = the "current" frontier the car stops at
+    var lamps = {};
+    function makeLamp(key) {
+      var halo = svg("circle", { cx: positions[key], cy: y, r: lampR * 3.1, fill: colors[key], filter: "url(#lampGlow)", opacity: 0 });
+      var core = svg("circle", { cx: positions[key], cy: y, r: lampR, fill: colors[key], opacity: 0 });
+      group.appendChild(halo); group.appendChild(core);
+      return { halo: halo, core: core };
     }
+    lamps.amber = makeLamp("amber");
+    if (cp.status === "done") lamps.green = makeLamp("green");
+    if (cp.status === "current") lamps.red = makeLamp("red");
 
-    // "You are here" tag for the frontier
+    // "You are here" tag for the frontier (opacity driven by how far the car has arrived)
+    var tag = null;
     if (cp.status === "current") {
       var tagW = 118, tagY = y - hh / 2 - 34;
-      var tag = svg("g", { class: "here-tag" });
+      tag = svg("g", { class: "here-tag", opacity: 0 });
       tag.appendChild(svg("rect", { x: (x - tagW / 2).toFixed(1), y: tagY, width: tagW, height: 24, rx: 12, fill: "#EC796B" }));
       var t = svg("text", { x: x, y: tagY + 16, "text-anchor": "middle", "font-family": "Inter, sans-serif", "font-size": 11, "font-weight": 800, "letter-spacing": "1.5", fill: "#1a0f2e" });
       t.textContent = "YOU ARE HERE";
       tag.appendChild(t);
-      // little pointer
       tag.appendChild(svg("path", { d: "M " + (x - 5) + " " + (tagY + 24) + " L " + (x + 5) + " " + (tagY + 24) + " L " + x + " " + (tagY + 31) + " Z", fill: "#EC796B" }));
       group.appendChild(tag);
     }
 
-    return { group: group, halo: halo, core: core, status: cp.status, y: y, index: cp.index };
+    // transparent hit target on top — makes hover/click reliable across the sign
+    var hit = svg("rect", { class: "light-hit", x: (x - 80).toFixed(1), y: (y - 46).toFixed(1), width: 160, height: 88, fill: "transparent", "pointer-events": "all" });
+    group.appendChild(hit);
+
+    return { group: group, lamps: lamps, tag: tag, hit: hit, status: cp.status, y: y, x: x, index: cp.index, step: cp.step };
   }
 
   function buildDestination(y) {

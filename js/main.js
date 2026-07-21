@@ -16,6 +16,9 @@
     // 1) Accessible baseline — always present.
     SCENE.buildStatic(steps);
 
+    // Explainer pop-up works in both the animated and static views.
+    if (window.POPUP) POPUP.init();
+
     // 2) Decide whether to enhance.
     var prefersReduced = window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
