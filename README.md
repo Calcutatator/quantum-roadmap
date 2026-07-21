@@ -112,9 +112,10 @@ The engine re-spaces the road, lights and copy panels automatically.
 - **Motion:** GSAP + ScrollTrigger (loaded via CDN — free for commercial use
   since April 2025). ScrollTrigger pins the stage and supplies scroll progress;
   a small ticker smooths it for feel **without** hijacking scroll speed.
-- **Sticky signs:** ScrollTrigger `snap` settles the scroll onto the nearest
-  sign when you pause (evenly spaced, one per sign plus the hero and finish). It
-  eases you onto a sign — it never hard-locks the scroll.
+- **Sticky signs:** a lightweight snap in the animation ticker eases the scroll
+  onto the nearest sign once you pause (evenly spaced — one per sign, plus the
+  hero and finish). Any fresh scroll input cancels it instantly, so the scroll
+  is never hard-locked; it only *settles* you on a sign when you stop.
 - **The car follows the road** because both are drawn from the same curve
   function — no MotionPath plugin needed, one fewer dependency to break.
 - **Two-zone camera:** up to the frontier the camera follows the car (it stays

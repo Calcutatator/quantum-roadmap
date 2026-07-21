@@ -17,6 +17,13 @@
   var hoveredIndex = -1; // sign currently hovered by the mouse (brightens)
   var snapPoints = [];   // progress values the scroll "sticks" to (each sign)
   var REACH_BAND = 130;  // world-units over which a sign changes colour as the car arrives
+  var stRef = null;      // the ScrollTrigger instance (scroll <-> progress math)
+  var lastInput = -1e9;  // ms of the last user scroll input (wheel/touch/key)
+  var lastMove = -1e9;   // ms the scroll position last changed (covers momentum)
+  var prevScroll = 0;    // last observed scroll position
+  var snapping = false;  // currently easing the scroll onto a sign
+  var snapTargetP = 0;   // progress we're sticking to
+  var SNAP_IDLE_MS = 130;// pause after scrolling stops before it sticks
 
   /* --- easing --- */
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
@@ -144,11 +151,49 @@
   }
 
   /* --- ticker loop (own smoothing → smooth without touching scroll speed) - */
-  function tick(time) {
+  function nowMs() { return (window.performance && performance.now) ? performance.now() : 0; }
+  function scrollY() { return window.pageYOffset || document.documentElement.scrollTop || 0; }
+
+  function tick() {
+    var tms = nowMs();                                   // ms clock (gsap.ticker's is seconds)
+    var cur = scrollY();
+    if (!snapping && Math.abs(cur - prevScroll) > 1) lastMove = tms; // user/momentum moving
+    maybeSnap(tms);
+    prevScroll = scrollY();
     currentP += (targetP - currentP) * 0.14;
     if (Math.abs(targetP - currentP) < 0.00015) currentP = targetP;
-    render(currentP, time);
+    render(currentP, tms);
   }
+
+  /* --- sticky signs: once the user pauses, ease the scroll onto the nearest
+     sign so it settles ("sticks") there. Any fresh input cancels it instantly,
+     so the scroll is never hard-locked. --------------------------------------- */
+  function nearestSnap(p) {
+    var best = snapPoints[0] || 0, bd = Math.abs(p - best);
+    for (var i = 1; i < snapPoints.length; i++) {
+      var d = Math.abs(p - snapPoints[i]);
+      if (d < bd) { bd = d; best = snapPoints[i]; }
+    }
+    return best;
+  }
+  function maybeSnap(tms) {
+    if (!stRef || snapPoints.length < 2) return;
+    if (document.documentElement.classList.contains("modal-open")) return; // pop-up open
+    if (!snapping) {
+      if (tms - lastInput < SNAP_IDLE_MS || tms - lastMove < SNAP_IDLE_MS) return; // still moving
+      var near = nearestSnap(targetP);
+      if (Math.abs(near - targetP) < 0.0015) return;   // already parked on a sign
+      snapping = true; snapTargetP = near;
+    }
+    var range = stRef.end - stRef.start;
+    if (range <= 0) { snapping = false; return; }
+    var goal = stRef.start + snapTargetP * range;
+    var cur = scrollY();
+    var next = cur + (goal - cur) * 0.2;
+    if (Math.abs(goal - cur) < 0.6) { next = goal; snapping = false; }
+    window.scrollTo(0, next);
+  }
+  function onUserInput() { lastInput = nowMs(); snapping = false; }
 
   /* --- setup -------------------------------------------------------------- */
   function computeSplit() {
@@ -187,20 +232,23 @@
     var gsap = window.gsap, ST = window.ScrollTrigger;
     gsap.registerPlugin(ST);
 
-    ST.create({
+    stRef = ST.create({
       trigger: driveSection,
       start: "top top",
       end: "bottom bottom",
       pin: stage,
       pinSpacing: true,
       invalidateOnRefresh: true,
-      // sticky: settle onto the nearest sign when scrolling stops (never hard-locks)
-      snap: { snapTo: snapPoints, duration: { min: 0.15, max: 0.5 }, delay: 0.06, ease: "power2.inOut", directional: false },
       onUpdate: function (self) { targetP = self.progress; },
       onRefresh: function (self) { targetP = self.progress; }
     });
 
     ST.addEventListener("refreshInit", computeDims);
+
+    // sticky signs: a fresh scroll input cancels any in-progress snap immediately
+    ["wheel", "touchstart", "touchmove", "keydown", "pointerdown"].forEach(function (ev) {
+      window.addEventListener(ev, onUserInput, { passive: true });
+    });
 
     // interactions: hover brightens a sign; click opens its explainer pop-up
     M.lights.forEach(function (L) {
