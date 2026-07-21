@@ -131,15 +131,16 @@
     var destEl = buildDestination(destinationY);
     world.appendChild(destEl);
 
+    // car is added BEFORE the lights so it drives UNDER the gantry/lights layer
+    var car = buildCar();
+    world.appendChild(car);
+
     var lights = [];
     cps.forEach(function (cp) {
       var g = buildLight(cp);
       world.appendChild(g.group);
       lights.push(g);
     });
-
-    var car = buildCar();
-    world.appendChild(car);
 
     // HTML copy panels
     var cardsWrap = document.getElementById("cards");
@@ -265,9 +266,6 @@
     group.appendChild(svg("rect", { x: (x - barW / 2).toFixed(1), y: (y - 5).toFixed(1), width: barW, height: 3, rx: 1.5, fill: "#4a4a9a", opacity: 0.6 }));
 
     var hw = 62, hh = 26;
-
-    // hover ring (framing highlight; shown on :hover via CSS)
-    group.appendChild(svg("rect", { class: "light-ring", x: (x - hw / 2 - 7).toFixed(1), y: (y - hh / 2 - 7).toFixed(1), width: hw + 14, height: hh + 14, rx: 14, fill: "none", stroke: "#FBFBFB", "stroke-width": 2, opacity: 0 }));
 
     // signal housing (top-down): three lamps L=red M=amber R=green
     var hx = x - hw / 2, hy = y - hh / 2;

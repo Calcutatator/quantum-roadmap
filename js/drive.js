@@ -16,8 +16,17 @@
   var hoveredIndex = -1; // sign currently hovered by the mouse (brightens)
   var REACH_BAND = 130;  // world-units over which a sign changes colour as the car arrives
   var phases = [];       // pacing timeline: eased "travel" legs + flat "dwell" (STOP) at each light
-  var TRAVEL_W = 1.2;    // relative scroll spent driving between lights
-  var DWELL_W = 0.8;     // relative scroll the car is STOPPED at each light
+  var snapCenters = [];  // progress at the centre of each light's dwell (settle targets)
+  var TRAVEL_W = 1.1;    // relative scroll spent driving between lights
+  var DWELL_W = 0.9;     // relative scroll the car is STOPPED at each light
+
+  // Settle: after scrolling stops, ease the scroll onto the nearest light so it
+  // always comes to rest ON a light (even after a fast flick). Idle-gated.
+  var stRef = null, scrollHint = null;
+  var lastInput = -1e9;  // ms of the last real user scroll input (wheel/touch/key)
+  var snapping = false, snapTargetP = 0;
+  var SNAP_IDLE_MS = 140;  // quiet time after input before it settles onto a light
+  var HINT_IDLE_MS = 1000; // time stopped at a light before the "scroll to drive" hint
 
   /* --- easing --- */
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
@@ -153,11 +162,58 @@
   /* --- ticker loop: smooth currentP → targetP (ms clock — gsap.ticker's is
      seconds, which would leave the sign "breathing" effectively frozen) ------ */
   function nowMs() { return (window.performance && performance.now) ? performance.now() : 0; }
+  function scrollY() { return window.pageYOffset || document.documentElement.scrollTop || 0; }
 
   function tick() {
+    var tms = nowMs();
+    maybeSnap(tms);
     currentP += (targetP - currentP) * 0.14;
     if (Math.abs(targetP - currentP) < 0.00015) currentP = targetP;
-    render(currentP, nowMs());
+    render(currentP, tms);
+    updateHint(tms);
+  }
+
+  /* --- settle onto the nearest light after scrolling stops (point 5) ------- */
+  function nearestSnap(p) {
+    var best = snapCenters.length ? snapCenters[0] : 0, bd = Math.abs(p - best);
+    for (var i = 1; i < snapCenters.length; i++) {
+      var d = Math.abs(p - snapCenters[i]);
+      if (d < bd) { bd = d; best = snapCenters[i]; }
+    }
+    return best;
+  }
+  function maybeSnap(tms) {
+    if (!stRef || snapCenters.length < 2) return;
+    if (document.documentElement.classList.contains("modal-open")) return; // pop-up open
+    if (tms - lastInput < SNAP_IDLE_MS) { snapping = false; return; }       // still scrolling
+    if (!snapping) {
+      var near = nearestSnap(targetP);
+      if (Math.abs(near - targetP) < 0.0015) return;                        // already on a light
+      snapping = true; snapTargetP = near;
+    }
+    var range = stRef.end - stRef.start;
+    if (range <= 0) { snapping = false; return; }
+    var goal = stRef.start + snapTargetP * range;
+    var cur = scrollY();
+    var next = cur + (goal - cur) * 0.18;
+    if (Math.abs(goal - cur) < 0.6) { next = goal; snapping = false; }
+    window.scrollTo(0, next);
+  }
+  function onUserInput() { lastInput = nowMs(); snapping = false; hideHint(); }
+
+  /* --- idle "Scroll to drive" hint when stopped at a light (point 3) ------- */
+  function atLight(p) {
+    for (var i = 0; i < phases.length; i++) {
+      if (p >= phases[i].p0 && p <= phases[i].p1) return phases[i].type === "dwell" && phases[i].isLight;
+    }
+    return false;
+  }
+  function hideHint() { if (scrollHint) scrollHint.classList.remove("is-visible"); }
+  function updateHint(tms) {
+    if (!scrollHint) return;
+    var show = (tms - lastInput > HINT_IDLE_MS) && atLight(currentP) &&
+               !document.documentElement.classList.contains("modal-open");
+    scrollHint.classList.toggle("is-visible", show);
   }
 
   /* --- setup -------------------------------------------------------------- */
@@ -176,11 +232,16 @@
     raw.forEach(function (r) { total += (r.type === "travel" ? TRAVEL_W : DWELL_W); });
     if (total === 0) total = 1;
     var acc = 0;
-    phases = raw.map(function (r) {
+    phases = raw.map(function (r, idx) {
       var w = (r.type === "travel" ? TRAVEL_W : DWELL_W);
       var p0 = acc / total; acc += w; var p1 = acc / total;
-      return { type: r.type, from: r.from, to: r.to, at: r.at, p0: p0, p1: p1 };
+      // a dwell is a "light" unless it's the final stop (the destination/finish)
+      var isLight = (r.type === "dwell" && idx !== raw.length - 1);
+      return { type: r.type, from: r.from, to: r.to, at: r.at, p0: p0, p1: p1, isLight: isLight };
     });
+    // settle targets: the centre of every dwell, plus the hero/start (0)
+    snapCenters = [0].concat(phases.filter(function (ph) { return ph.type === "dwell"; })
+                                   .map(function (ph) { return (ph.p0 + ph.p1) / 2; }));
   }
 
   function init(model) {
@@ -191,6 +252,7 @@
     finish = document.getElementById("finish");
     railFill = document.getElementById("rail-fill");
     driveSection = document.getElementById("drive");
+    scrollHint = document.getElementById("scroll-hint");
 
     computePacing();
     computeDims();
@@ -198,7 +260,7 @@
     var gsap = window.gsap, ST = window.ScrollTrigger;
     gsap.registerPlugin(ST);
 
-    ST.create({
+    stRef = ST.create({
       trigger: driveSection,
       start: "top top",
       end: "bottom bottom",
@@ -210,6 +272,11 @@
     });
 
     ST.addEventListener("refreshInit", computeDims);
+
+    // a fresh scroll input cancels the settle and hides the idle hint
+    ["wheel", "touchstart", "touchmove", "keydown", "pointerdown"].forEach(function (ev) {
+      window.addEventListener(ev, onUserInput, { passive: true });
+    });
 
     // interactions: hover brightens a sign; click opens its explainer pop-up
     M.lights.forEach(function (L) {

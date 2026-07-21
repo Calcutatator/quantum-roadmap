@@ -41,7 +41,7 @@
       // Scroll length controls the SCROLL SPEED: taller = the same scrolling
       // advances the journey less, i.e. slower. ~2 screens of scroll per stop
       // (start + each light + finish). Raise SCREENS_PER_STOP to slow further.
-      var SCREENS_PER_STOP = 2.0;
+      var SCREENS_PER_STOP = 2.3;
       var scrollVh = Math.max((steps.length + 2) * SCREENS_PER_STOP, 8) * 100;
       document.getElementById("drive").style.height = scrollVh + "vh";
 

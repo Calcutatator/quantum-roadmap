@@ -306,8 +306,18 @@ html.is-enhanced.layout-dock .rail { height: min(44vh, 300px); right: .6rem; }
    SIGN INTERACTIONS — cursor, hover ring, and "Details" buttons
    ========================================================================== */
 .light-hit { cursor: pointer; }
-.light-ring { transition: opacity .18s ease; pointer-events: none; }
-.light:hover .light-ring { opacity: .5; }
+
+/* Idle "Scroll to drive" nudge shown when stopped at a light */
+.scroll-hint {
+  position: absolute; left: 50%; bottom: clamp(1.2rem, 6vh, 3.5rem);
+  transform: translateX(-50%);
+  z-index: 6; display: flex; flex-direction: column; align-items: center; gap: .55rem;
+  color: var(--sn-lavender-sky); font-weight: 600; font-size: .95rem; letter-spacing: .01em;
+  text-shadow: 0 2px 14px rgba(0,0,0,.55);
+  pointer-events: none; opacity: 0; transition: opacity .45s var(--ease);
+}
+.scroll-hint.is-visible { opacity: 1; }
+html.layout-dock .scroll-hint { display: none; } /* avoid clashing with the docked card */
 
 .card-more, .rs-more {
   margin-top: .75rem; padding: .42rem .85rem; border-radius: 9px;
