@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>How close is Starknet to being post-quantum secure?</title>
+  <meta name="description" content="A scroll-driven journey down Starknet's road to post-quantum security — where we are today, and what's still ahead." />
+
+  <!-- Starknet brand typeface -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body class="sn-dark">
+  <a class="skip-link" href="#roadmap-static">Skip to roadmap</a>
+
+  <main id="main">
+    <!-- ====================================================================
+         BASELINE (always in the DOM): a clean, semantic vertical timeline.
+         This is what shows when motion is reduced or GSAP is unavailable.
+         scene.js fills #rs-list from roadmap.config.js.
+         ==================================================================== -->
+    <section id="roadmap-static" class="roadmap-static" aria-labelledby="rs-title">
+      <header class="rs-hero">
+        <p class="rs-eyebrow">Starknet · Post-Quantum Roadmap</p>
+        <h1 id="rs-title" class="rs-headline">
+          How close is Starknet to being<br />
+          <span class="rs-grad">post-quantum secure?</span>
+        </h1>
+        <p class="rs-sub">Follow the road. The car drives every step we've completed, then parks exactly where we are today.</p>
+        <p class="rs-scrollcue" data-enhanced-only>Scroll to drive ↓</p>
+      </header>
+
+      <ol id="rs-list" class="rs-list" aria-label="Roadmap milestones">
+        <!-- built from roadmap.config.js by scene.js -->
+      </ol>
+
+      <footer class="rs-finish">
+        <span class="rs-finish-badge">Post-Quantum Secure</span>
+        <p class="rs-finish-note">The destination the whole road leads to.</p>
+      </footer>
+    </section>
+
+    <!-- ====================================================================
+         ENHANCED SCENE (birdseye drive). Shown only when enhancement is on.
+         Built by scene.js, animated by drive.js.
+         ==================================================================== -->
+    <section id="drive" class="drive" aria-hidden="true">
+      <div id="stage" class="stage">
+        <svg id="scene" class="scene" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+
+        <!-- HTML copy panels, positioned to track their light each frame -->
+        <div id="cards" class="cards"></div>
+
+        <!-- Hero overlay (fades out as the drive begins) -->
+        <div id="hero" class="hero-overlay">
+          <p class="hero-eyebrow">Starknet · Post-Quantum Roadmap</p>
+          <h2 class="hero-headline">How close is Starknet to being <span class="rs-grad">post-quantum secure?</span></h2>
+          <p class="hero-scrollcue">Scroll to drive
+            <span class="hero-arrow" aria-hidden="true"></span>
+          </p>
+        </div>
+
+        <!-- Destination payoff (fades in at the end of the road) -->
+        <div id="finish" class="finish-overlay" aria-hidden="true">
+          <div class="finish-inner">
+            <div class="finish-badge">Post-Quantum<br />Secure</div>
+            <p class="finish-copy">The destination the whole road leads to.</p>
+            <div class="finish-cta" data-cta-slot><!-- optional CTA slot --></div>
+          </div>
+        </div>
+
+        <!-- Persistent progress rail: distance to post-quantum secure -->
+        <aside id="rail" class="rail" aria-hidden="true">
+          <span class="rail-cap rail-cap-top">PQ&nbsp;Secure</span>
+          <div class="rail-track"><div id="rail-fill" class="rail-fill"></div></div>
+          <span class="rail-cap rail-cap-bot">Start</span>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <noscript>
+    <p style="max-width:40rem;margin:2rem auto;padding:0 1.25rem;font:400 1rem/1.6 system-ui,sans-serif;color:#FBFBFB">
+      This page uses JavaScript to render the interactive roadmap. With scripts
+      disabled the content can't load — please enable JavaScript, or ask for a
+      static version of the roadmap.
+    </p>
+  </noscript>
+
+  <!-- Content source of truth -->
+  <script src="roadmap.config.js"></script>
+
+  <!-- GSAP + ScrollTrigger via CDN (free for commercial use since Apr 2025).
+       If these fail to load, main.js falls back to the static timeline. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <!-- App -->
+  <script src="js/scene.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

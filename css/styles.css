@@ -1,0 +1,303 @@
+/* ============================================================================
+   Quantum Roadmap Site — styles
+   Brand: Starknet (2023 community system) — Infinite Blue ground, Nebula
+   gradient signature, Inter throughout. Accents kept subordinate to the
+   background per the brand manual.
+   ========================================================================== */
+
+:root {
+  /* --- Starknet core --- */
+  --sn-infinite-blue: #0C0C4F;
+  --sn-white-flare:   #FBFBFB;
+  --sn-nebula-a:      #EC796B;
+  --sn-nebula-b:      #D672EF;
+  --sn-nebula:        linear-gradient(90deg, #EC796B, #D672EF);
+
+  /* --- Starknet accents (Tier A / B) used sparingly --- */
+  --sn-cosmic-blue:   #1C1C84;
+  --sn-purple-void:   #4343D1;
+  --sn-galaxy-blue:   #3F8CFF;
+  --sn-moon-green:    #6985A3;
+  --sn-comet-green:   #8DBABB;
+  --sn-boreal-green:  #90EAC4;
+  --sn-lavender-sky:  #A1A1D6;
+  --sn-space-blue:    #C1F3FC;
+
+  /* --- Semantic tokens for this page --- */
+  --bg-deep:    #070733;                 /* atmospheric edge, darker than IB */
+  --bg:         var(--sn-infinite-blue);
+  --ink:        var(--sn-white-flare);
+  --ink-soft:   #C7C7E6;                 /* muted body text (lavender-derived) */
+  --ink-faint:  #7C7CA8;
+
+  --go:    var(--sn-boreal-green);       /* GREEN light — completed */
+  --stop:  var(--sn-nebula-a);           /* RED light — current frontier */
+  --amber: #F4B15E;                      /* optional AMBER — in progress */
+  --lamp-off: #22225C;                   /* unlit lamp body */
+
+  --card-bg:     rgba(20, 20, 74, 0.72);
+  --card-border: rgba(161, 161, 214, 0.28);
+  --hairline:    rgba(161, 161, 214, 0.18);
+
+  --font: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- reset-ish --- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(120% 80% at 50% -10%, #16166a 0%, var(--bg) 42%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+.rs-grad {
+  background: var(--sn-nebula);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.skip-link {
+  position: absolute; left: 50%; top: -100px; transform: translateX(-50%);
+  z-index: 999; padding: .6rem 1rem; border-radius: 8px;
+  background: var(--sn-white-flare); color: var(--sn-infinite-blue);
+  font-weight: 600; text-decoration: none; transition: top .2s var(--ease);
+}
+.skip-link:focus { top: 12px; }
+
+/* Enhanced-only cues hidden until JS turns enhancement on */
+[data-enhanced-only] { display: none; }
+
+/* ============================================================================
+   BASELINE / FALLBACK — semantic vertical timeline
+   Visible by default and whenever we are NOT enhanced (reduced motion, no
+   GSAP, JS-but-no-anim). Designed to stand on its own as a clean roadmap.
+   ========================================================================== */
+.roadmap-static {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 6rem) clamp(1.25rem, 5vw, 2rem) 5rem;
+}
+.rs-hero { text-align: center; margin-bottom: clamp(2.5rem, 7vw, 4.5rem); }
+.rs-eyebrow {
+  text-transform: uppercase; letter-spacing: .18em; font-size: .78rem;
+  font-weight: 600; color: var(--sn-lavender-sky); margin: 0 0 1.1rem;
+}
+.rs-headline {
+  font-size: clamp(2rem, 6.5vw, 3.4rem); font-weight: 800; line-height: 1.08;
+  letter-spacing: -0.02em; margin: 0 0 1.1rem;
+}
+.rs-sub {
+  color: var(--ink-soft); font-size: clamp(1rem, 2.6vw, 1.15rem);
+  max-width: 34rem; margin: 0 auto;
+}
+.rs-scrollcue { margin-top: 1.75rem; color: var(--sn-lavender-sky); font-weight: 600; }
+
+.rs-list {
+  list-style: none; margin: 0; padding: 0; position: relative;
+}
+/* the timeline spine */
+.rs-list::before {
+  content: ""; position: absolute; left: 21px; top: 8px; bottom: 8px; width: 2px;
+  background: linear-gradient(180deg, var(--go), var(--stop) 55%, var(--hairline) 62%);
+  border-radius: 2px;
+}
+.rs-item {
+  position: relative; padding: 0 0 1.4rem 3.75rem; min-height: 52px;
+}
+.rs-item:last-child { padding-bottom: 0; }
+/* the lamp dot */
+.rs-dot {
+  position: absolute; left: 10px; top: 2px; width: 24px; height: 24px;
+  border-radius: 50%; background: var(--lamp-off);
+  border: 3px solid var(--bg-deep); box-shadow: 0 0 0 2px var(--hairline);
+}
+.rs-item[data-status="done"]     .rs-dot { background: var(--go);    box-shadow: 0 0 0 2px var(--go),    0 0 16px 1px color-mix(in srgb, var(--go) 65%, transparent); }
+.rs-item[data-status="current"]  .rs-dot { background: var(--stop);  box-shadow: 0 0 0 2px var(--stop),  0 0 18px 2px color-mix(in srgb, var(--stop) 70%, transparent); }
+.rs-item[data-status="progress"] .rs-dot { background: var(--amber); box-shadow: 0 0 0 2px var(--amber), 0 0 16px 1px color-mix(in srgb, var(--amber) 65%, transparent); }
+
+.rs-badge {
+  display: inline-block; font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: .2rem .55rem; border-radius: 999px;
+  margin-bottom: .5rem; border: 1px solid var(--hairline); color: var(--ink-soft);
+}
+.rs-item[data-status="done"]     .rs-badge { color: var(--go);    border-color: color-mix(in srgb, var(--go) 45%, transparent); }
+.rs-item[data-status="current"]  .rs-badge { color: var(--stop);  border-color: color-mix(in srgb, var(--stop) 55%, transparent); background: color-mix(in srgb, var(--stop) 12%, transparent); }
+.rs-item[data-status="upcoming"] .rs-badge { color: var(--ink-faint); }
+.rs-item[data-status="progress"] .rs-badge { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 45%, transparent); }
+
+.rs-item-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 .3rem; }
+.rs-item[data-status="upcoming"] .rs-item-title { color: var(--ink-soft); }
+.rs-item-body { color: var(--ink-soft); margin: 0; font-size: .98rem; }
+.rs-item-link { display: inline-block; margin-top: .55rem; color: var(--sn-galaxy-blue); font-weight: 600; text-decoration: none; }
+.rs-item-link:hover { text-decoration: underline; }
+
+.rs-finish { text-align: center; margin-top: 3rem; }
+.rs-finish-badge {
+  display: inline-block; font-weight: 800; font-size: 1.35rem; letter-spacing: -0.01em;
+  padding: .85rem 1.6rem; border-radius: 16px; color: var(--bg);
+  background: var(--sn-nebula);
+  box-shadow: 0 10px 40px -8px color-mix(in srgb, var(--sn-nebula-b) 60%, transparent);
+}
+.rs-finish-note { color: var(--ink-soft); margin: .9rem 0 0; }
+
+/* ============================================================================
+   ENHANCED SCENE — hidden until JS confirms it can drive it
+   ========================================================================== */
+.drive { display: none; }
+#roadmap-static { display: block; }
+
+html.is-enhanced .drive { display: block; }
+html.is-enhanced #roadmap-static { display: none; }
+html.is-enhanced [data-enhanced-only] { display: block; }
+
+.stage {
+  position: relative;
+  height: 100vh; height: 100svh;
+  width: 100%;
+  overflow: hidden;
+}
+.scene {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block;
+}
+
+/* --- copy panels (HTML, positioned by JS to track their light) --- */
+.cards { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.card {
+  position: absolute; top: 0; left: 0;
+  width: min(340px, 74vw);
+  padding: 1.05rem 1.2rem 1.15rem;
+  border-radius: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 18px 50px -18px rgba(0,0,0,.7);
+  backdrop-filter: blur(9px) saturate(120%);
+  -webkit-backdrop-filter: blur(9px) saturate(120%);
+  will-change: transform, opacity;
+  opacity: 0;
+  pointer-events: auto;
+}
+.card-title { font-size: 1.08rem; font-weight: 700; margin: .1rem 0 .35rem; line-height: 1.2; }
+.card-body { font-size: .92rem; color: var(--ink-soft); margin: 0; }
+.card-badge {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .66rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  padding: .18rem .5rem; border-radius: 999px; border: 1px solid var(--hairline);
+}
+.card-badge::before { content:""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.card[data-status="done"]     .card-badge { color: var(--go); }
+.card[data-status="current"]  .card-badge { color: var(--stop); }
+.card[data-status="upcoming"] .card-badge { color: var(--ink-faint); }
+.card[data-status="progress"] .card-badge { color: var(--amber); }
+.card-link { display:inline-block; margin-top:.6rem; color: var(--sn-galaxy-blue); font-weight:600; text-decoration:none; font-size:.9rem; }
+.card-link:hover { text-decoration: underline; }
+
+/* side anchoring on wide screens */
+.card-left  { margin-left: clamp(1rem, 8vw, 8.5rem); }
+.card-right { left: auto; right: 0; margin-right: clamp(1rem, 8vw, 8.5rem); }
+
+/* --- hero overlay --- */
+.hero-overlay {
+  position: absolute; inset: 0; z-index: 4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 0 1.5rem; pointer-events: none;
+  will-change: opacity, transform;
+}
+.hero-eyebrow {
+  text-transform: uppercase; letter-spacing: .2em; font-size: .8rem; font-weight: 600;
+  color: var(--sn-lavender-sky); margin: 0 0 1rem;
+}
+.hero-headline {
+  font-size: clamp(1.9rem, 5.5vw, 3.6rem); font-weight: 800; line-height: 1.08;
+  letter-spacing: -0.02em; margin: 0; max-width: 16ch;
+}
+.hero-scrollcue {
+  margin-top: 2.2rem; color: var(--sn-lavender-sky); font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; gap: .6rem;
+}
+.hero-arrow {
+  width: 18px; height: 28px; border: 2px solid var(--sn-lavender-sky); border-radius: 12px;
+  position: relative;
+}
+.hero-arrow::before {
+  content:""; position: absolute; left: 50%; top: 6px; width: 3px; height: 7px;
+  border-radius: 2px; background: var(--sn-lavender-sky); transform: translateX(-50%);
+  animation: scrollpip 1.6s var(--ease) infinite;
+}
+@keyframes scrollpip { 0%{opacity:1;transform:translate(-50%,0)} 70%{opacity:0;transform:translate(-50%,10px)} 100%{opacity:0} }
+
+/* --- destination overlay --- */
+.finish-overlay {
+  position: absolute; inset: 0; z-index: 4;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 0 1.5rem; pointer-events: none; opacity: 0;
+  will-change: opacity, transform;
+}
+.finish-inner { transform: translateY(20px); }
+.finish-badge {
+  font-weight: 900; font-size: clamp(1.8rem, 6vw, 3.4rem); line-height: 1.02;
+  letter-spacing: -0.02em; padding: clamp(1rem,3vw,1.6rem) clamp(1.4rem,5vw,2.6rem);
+  border-radius: 22px; color: #1a0f2e; background: var(--sn-nebula);
+  box-shadow: 0 0 60px -6px color-mix(in srgb, var(--sn-nebula-b) 65%, transparent),
+              0 20px 60px -20px rgba(0,0,0,.8);
+  display: inline-block;
+}
+.finish-copy { color: var(--ink-soft); margin: 1.4rem auto 0; max-width: 30rem; font-size: 1.05rem; }
+.finish-cta:empty { display: none; }
+.finish-cta { margin-top: 1.4rem; }
+
+/* --- progress rail --- */
+.rail {
+  position: absolute; z-index: 5; right: clamp(.7rem, 2.5vw, 1.5rem);
+  top: 50%; transform: translateY(-50%);
+  height: min(58vh, 420px);
+  display: flex; flex-direction: column; align-items: center; gap: .6rem;
+  pointer-events: none;
+}
+.rail-cap { font-size: .62rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+.rail-cap-top { color: color-mix(in srgb, var(--sn-nebula-b) 80%, white); }
+.rail-track {
+  position: relative; flex: 1; width: 6px; border-radius: 999px;
+  background: rgba(161,161,214,.16); overflow: hidden;
+}
+.rail-fill {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+  background: linear-gradient(180deg, var(--sn-nebula-b), var(--sn-nebula-a));
+  border-radius: 999px;
+}
+
+/* ============================================================================
+   RESPONSIVE — dock copy panels to the bottom on narrow screens
+   ========================================================================== */
+html.is-enhanced.layout-dock .card {
+  left: 50% !important; right: auto !important; margin: 0 !important;
+  width: min(440px, 92vw);
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  top: auto;
+  transform: translateX(-50%) !important;   /* JS doesn't set transform in dock mode */
+}
+html.is-enhanced.layout-dock .rail { height: min(44vh, 300px); right: .6rem; }
+
+@media (max-width: 640px) {
+  .rail-cap { font-size: .55rem; }
+}
+
+/* ============================================================================
+   MOTION PREFERENCES — hard requirement: opt-outs get the static view
+   (main.js also refuses to enhance under reduced motion; this is a backstop)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .hero-arrow::before { animation: none; }
+  * { scroll-behavior: auto !important; }
+}
