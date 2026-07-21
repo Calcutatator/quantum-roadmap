@@ -317,7 +317,10 @@ html.is-enhanced.layout-dock .rail { height: min(44vh, 300px); right: .6rem; }
   pointer-events: none; opacity: 0; transition: opacity .45s var(--ease);
 }
 .scroll-hint.is-visible { opacity: 1; }
-html.layout-dock .scroll-hint { display: none; } /* avoid clashing with the docked card */
+/* on mobile the copy card docks to the bottom, so move the hint to the top */
+html.layout-dock .scroll-hint {
+  bottom: auto; top: max(1rem, env(safe-area-inset-top)); gap: .4rem;
+}
 
 .card-more, .rs-more {
   margin-top: .75rem; padding: .42rem .85rem; border-radius: 9px;

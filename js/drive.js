@@ -24,6 +24,8 @@
   // always comes to rest ON a light (even after a fast flick). Idle-gated.
   var stRef = null, scrollHint = null;
   var lastInput = -1e9;  // ms of the last real user scroll input (wheel/touch/key)
+  var lastMove = -1e9;   // ms the scroll position last changed (covers touch momentum)
+  var prevScroll = 0;    // last observed scroll position
   var snapping = false, snapTargetP = 0;
   var SNAP_IDLE_MS = 140;  // quiet time after input before it settles onto a light
   var HINT_IDLE_MS = 1000; // time stopped at a light before the "scroll to drive" hint
@@ -166,7 +168,10 @@
 
   function tick() {
     var tms = nowMs();
+    var cur = scrollY();
+    if (!snapping && Math.abs(cur - prevScroll) > 1) lastMove = tms; // user/momentum still scrolling
     maybeSnap(tms);
+    prevScroll = scrollY();
     currentP += (targetP - currentP) * 0.14;
     if (Math.abs(targetP - currentP) < 0.00015) currentP = targetP;
     render(currentP, tms);
@@ -185,7 +190,7 @@
   function maybeSnap(tms) {
     if (!stRef || snapCenters.length < 2) return;
     if (document.documentElement.classList.contains("modal-open")) return; // pop-up open
-    if (tms - lastInput < SNAP_IDLE_MS) { snapping = false; return; }       // still scrolling
+    if (tms - lastInput < SNAP_IDLE_MS || tms - lastMove < SNAP_IDLE_MS) { snapping = false; return; } // still scrolling / momentum
     if (!snapping) {
       var near = nearestSnap(targetP);
       if (Math.abs(near - targetP) < 0.0015) return;                        // already on a light
