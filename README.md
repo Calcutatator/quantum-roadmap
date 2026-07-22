@@ -112,12 +112,16 @@ The engine re-spaces the road, lights and copy panels automatically.
 - **Motion:** GSAP + ScrollTrigger (loaded via CDN — free for commercial use
   since April 2025). ScrollTrigger pins the stage and supplies scroll progress;
   a small ticker smooths it for feel **without** hijacking scroll speed.
-- **Stops at every light:** the scroll→motion mapping isn't linear — it eases
-  the car along each leg, then goes *flat* (a "dwell") at each light so the car
-  comes to a stop there on the first pass, the same hold the frontier uses. Tune
-  the feel with `TRAVEL_W` / `DWELL_W` in `js/drive.js` (higher `DWELL_W` = a
-  longer hold). The car never drives past the `current` frontier — it comes to a
-  full stop there and the camera pans on to the amber lights and finish.
+- **Stops at every light (first run only):** the scroll→motion mapping isn't
+  linear — it eases the car along each leg, then goes *flat* (a "dwell") at each
+  light so the car comes to a stop there, the same hold the frontier uses. This
+  happens **only on the first run-through**: once you scroll all the way to the
+  end, the mapping switches to a plain linear drive (no dwells, no settle) so
+  re-scrolling up and down is smooth. The switch is seamless because it happens
+  at the end, where both mappings meet. Tune the feel with `TRAVEL_W` /
+  `DWELL_W` in `js/drive.js` (higher `DWELL_W` = a longer hold). The car never
+  drives past the `current` frontier — it comes to a full stop there and the
+  camera pans on to the amber lights and finish.
 - **The car follows the road** because both are drawn from the same curve
   function — no MotionPath plugin needed, one fewer dependency to break.
 - **Two-zone camera:** up to the frontier the camera follows the car (it stays

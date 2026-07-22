@@ -29,6 +29,7 @@
   var snapping = false, snapTargetP = 0;
   var SNAP_IDLE_MS = 140;  // quiet time after input before it settles onto a light
   var HINT_IDLE_MS = 1000; // time stopped at a light before the "scroll to drive" hint
+  var firstPassDone = false; // after the first full run to the end, drop the stops (linear scrub)
 
   /* --- easing --- */
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
@@ -46,6 +47,8 @@
   // visibly STOPS at every light — the same hold the "you are here" frontier
   // uses. Pure function of p, so it stops on the first pass and is testable.
   function lookAtY(p) {
+    // after the first full run-through: plain linear drive, no dwells/stops
+    if (firstPassDone) return lerp(M.carStartY, M.destinationY, clamp01(p));
     if (!phases.length) return M.carStartY;
     if (p <= 0) return phases[0].from;
     for (var i = 0; i < phases.length; i++) {
@@ -80,6 +83,7 @@
 
   /* --- the render (pure function of p) ------------------------------------ */
   function render(p, time) {
+    if (!firstPassDone && p >= 0.999) firstPassDone = true; // reached the end → drop the stops
     var la = lookAtY(p);
     var cy = carY(p);
     var camTy = vbH / 2 - la;
@@ -190,6 +194,7 @@
     return best;
   }
   function maybeSnap(tms) {
+    if (firstPassDone) { snapping = false; return; } // no settling after the first run
     if (!stRef || snapCenters.length < 2) return;
     if (document.documentElement.classList.contains("modal-open")) return; // pop-up open
     if (tms - lastInput < SNAP_IDLE_MS || tms - lastMove < SNAP_IDLE_MS) { snapping = false; return; } // still scrolling / momentum
@@ -218,7 +223,7 @@
   function hideHint() { if (scrollHint) scrollHint.classList.remove("is-visible"); }
   function updateHint(tms) {
     if (!scrollHint) return;
-    var show = (tms - lastInput > HINT_IDLE_MS) && atLight(currentP) &&
+    var show = !firstPassDone && (tms - lastInput > HINT_IDLE_MS) && atLight(currentP) &&
                !document.documentElement.classList.contains("modal-open");
     scrollHint.classList.toggle("is-visible", show);
   }
